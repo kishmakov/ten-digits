@@ -19,6 +19,6 @@ python -m src.train \
   --run-dir "${RUN_DIR}"
 
 echo "=== Uploading to ${GCS_OUTPUT} ==="
-gsutil -m cp -r "${RUN_DIR}" "${GCS_OUTPUT}"
+gsutil -m cp -r "${RUN_DIR}/"* "${GCS_OUTPUT}/"
 
 echo "=== Done. Artifacts at ${GCS_OUTPUT} ==="

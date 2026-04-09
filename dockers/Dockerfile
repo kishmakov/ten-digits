@@ -19,8 +19,10 @@ RUN apt-get update -qq && apt-get install -y -qq curl gnupg && \
 # Copy source code
 COPY src/ /app/src/
 COPY evaluate_checkpoints.py /app/evaluate_checkpoints.py
+COPY demo_test.py /app/demo_test.py
 COPY scripts/train_and_upload.sh /app/train_and_upload.sh
-RUN chmod +x /app/train_and_upload.sh
+COPY scripts/run_demo_test.sh /app/run_demo_test.sh
+RUN chmod +x /app/train_and_upload.sh /app/run_demo_test.sh
 
 # Create output directories
 RUN mkdir -p /app/results/runs /app/results/data /app/checkpoints
