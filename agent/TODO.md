@@ -13,20 +13,25 @@ A 456-parameter transformer that achieves 100% exact-match accuracy on 10-digit 
 - [x] `src/train.py` — Training with 3-phase curriculum learning, cosine LR, AdamW
 - [x] `src/eval.py` — Evaluation and inference
 - [x] `evaluate_checkpoints.py` — Multi-seed checkpoint evaluation
-- [x] `dockers/Dockerfile` — Docker container for Vertex AI training (corrected to reference config)
+- [x] `dockers/Dockerfile` — Docker container with gsutil for GCS checkpoint upload
+- [x] `scripts/train_and_upload.sh` — Training wrapper that uploads artifacts to GCS on completion
 - [x] `cloudbuild.yaml` — Cloud Build config for building Docker image remotely
-- [x] Docker image built and pushed to Artifact Registry via Cloud Build
-- [x] Training job submitted to Vertex AI (job ID: 2196038476619579392)
-  - Cancelled previous job (8790715705973538816) which used wrong qkv_rank=5/ffn_rank=2
+- [x] `demo_test.py` — Test set demonstration script (downloads checkpoint from GCS, evaluates on 100K examples across 10 seeds, shows human-readable predictions)
+- [x] GCS bucket `gs://kishmakov-trans-count-outputs/` created for training outputs
+- [x] Docker image rebuilt with GCS upload support (build ID: 7f3de47a)
+- [x] Training job submitted to Vertex AI (job ID: 1312207049748119552)
 
 ### In Progress
-- [ ] Monitor training job (job ID: 2196038476619579392)
+- [ ] Monitor training job (job ID: 1312207049748119552)
   - Grokking expected around step 40K-54K
-  - Check logs: `gcloud ai custom-jobs stream-logs projects/275442587350/locations/us-central1/customJobs/2196038476619579392`
+  - Checkpoint will be saved to: `gs://kishmakov-trans-count-outputs/456p_s43/`
+  - Check logs: `gcloud ai custom-jobs stream-logs projects/275442587350/locations/us-central1/customJobs/1312207049748119552`
 
 ### Pending
-- [ ] Verify 456-parameter count from training logs
-- [ ] Evaluate best checkpoint on test set for exact-match accuracy
+- [ ] Run `demo_test.py` once checkpoint appears in GCS:
+  ```bash
+  python demo_test.py  # auto-downloads from GCS and runs full evaluation
+  ```
 
 ## 456-Parameter Configuration (reference-exact)
 
@@ -45,7 +50,7 @@ Matches https://github.com/yinglunz/A-456-Parameter-Transformer-Solves-10-Digit-
 | ln_f | RMSNorm(7) | 7 |
 | **Total** | | **456** |
 
-Training command:
+Training command (inside container):
 ```bash
 python -m src.train \
   --run-name 456p_s43 \
@@ -61,3 +66,17 @@ python -m src.train \
 - Paper used seed 43 for the 456-param model with 100% exact-match
 - Cloud Build API was enabled and compute SA granted artifactregistry.writer role
 - Local disk is full; always use `gcloud builds submit` instead of `scripts/build_docker.sh`
+- GCS bucket `gs://kishmakov-trans-count-outputs/` in us-central1 stores training outputs
+
+## Evaluation (once checkpoint available)
+
+```bash
+# Full evaluation: 10 seeds × 10K examples = 100K total
+python demo_test.py
+
+# Quick smoke test: 50 random examples  
+python demo_test.py --quick
+
+# With local checkpoint:
+python demo_test.py --ckpt results/runs/456p_s43/checkpoints/best.pt
+```
