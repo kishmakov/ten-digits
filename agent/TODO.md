@@ -13,34 +13,35 @@ A 456-parameter transformer that achieves 100% exact-match accuracy on 10-digit 
 - [x] `src/train.py` — Training with 3-phase curriculum learning, cosine LR, AdamW
 - [x] `src/eval.py` — Evaluation and inference
 - [x] `evaluate_checkpoints.py` — Multi-seed checkpoint evaluation
-- [x] `dockers/Dockerfile` — Docker container for Vertex AI training
+- [x] `dockers/Dockerfile` — Docker container for Vertex AI training (corrected to reference config)
 - [x] `cloudbuild.yaml` — Cloud Build config for building Docker image remotely
 - [x] Docker image built and pushed to Artifact Registry via Cloud Build
-- [x] Training job submitted to Vertex AI (job ID: 8790715705973538816)
+- [x] Training job submitted to Vertex AI (job ID: 2196038476619579392)
+  - Cancelled previous job (8790715705973538816) which used wrong qkv_rank=5/ffn_rank=2
 
 ### In Progress
-- [ ] Monitor training job (job ID: 8790715705973538816)
+- [ ] Monitor training job (job ID: 2196038476619579392)
   - Grokking expected around step 40K-54K
-  - Check logs: `gcloud ai custom-jobs stream-logs projects/275442587350/locations/us-central1/customJobs/8790715705973538816`
+  - Check logs: `gcloud ai custom-jobs stream-logs projects/275442587350/locations/us-central1/customJobs/2196038476619579392`
 
 ### Pending
 - [ ] Verify 456-parameter count from training logs
 - [ ] Evaluate best checkpoint on test set for exact-match accuracy
 
-## 456-Parameter Configuration
+## 456-Parameter Configuration (reference-exact)
 
-Derived by solving: total_params = 456
+Matches https://github.com/yinglunz/A-456-Parameter-Transformer-Solves-10-Digit-Addition exactly.
 
 | Component | Config | Params |
 |-----------|--------|--------|
 | token_emb | 14 × 7, tied with lm_head | 98 |
 | pos_emb | LowRankEmbedding(33, 7, rank=3) | 120 |
 | ln1 | RMSNorm(7) | 7 |
-| QKV (shareA_tieKV) | A(7×5) + Bq(5×7) + Bkv(5×7) | 105 |
+| QKV (shareA_tieKV) | A(7×3) + Bq(3×7) + Bkv(3×7) | 63 |
 | attn_out | LowRankLinear(7, 7, rank=2) | 28 |
 | ln2 | RMSNorm(7) | 7 |
-| MLP fc1 | LowRankLinear(7, 14, rank=2) | 42 |
-| MLP fc2 | LowRankLinear(14, 7, rank=2) | 42 |
+| MLP fc1 | LowRankLinear(7, 14, rank=3) | 63 |
+| MLP fc2 | LowRankLinear(14, 7, rank=3) | 63 |
 | ln_f | RMSNorm(7) | 7 |
 | **Total** | | **456** |
 
@@ -48,9 +49,9 @@ Training command:
 ```bash
 python -m src.train \
   --run-name 456p_s43 \
-  --pos-rank 3 --qkv-rank 5 --attn-out-rank 2 --ffn-rank 2 \
+  --pos-rank 3 --qkv-rank 3 --attn-out-rank 2 --ffn-rank 3 \
   --tie-qkv shareA_tieKV --use-rmsnorm \
-  --seed 43 --train-steps 54000 --warmup-steps 2700 \
+  --seed 43 --train-steps 54000 --warmup-steps 1350 \
   --device cuda --dtype bf16
 ```
 
@@ -59,3 +60,4 @@ python -m src.train \
 - Only 2 of 5 seeds succeed within 54K steps (seeds 43 and 44 in original paper)
 - Paper used seed 43 for the 456-param model with 100% exact-match
 - Cloud Build API was enabled and compute SA granted artifactregistry.writer role
+- Local disk is full; always use `gcloud builds submit` instead of `scripts/build_docker.sh`
