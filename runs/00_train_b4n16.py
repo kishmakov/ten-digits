@@ -23,11 +23,8 @@ def train() -> None:
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
 
-
     # Initialize a new run
     run = aim.Run(repo='/tmp/trn')
-
-    # Log run parameters
     run["cfg"] = cfg.__dict__
 
     for epoch in range(cfg.epochs):
@@ -36,13 +33,19 @@ def train() -> None:
         loss.backward()
         optimizer.step()
 
-        run.track(loss.item(), name='loss', step=epoch, context={"subset":"train"})
+        if epoch% 10 == 9:
+            with torch.no_grad():
+                out = model.get_predictions(X)
+                rmse = torch.sqrt(torch.mean((out["preds"] - Y) ** 2))
+                acc = (out["pred_idx"] == Y.argmax(dim=-1)).float().mean()
+
+            run.track(loss.item(), name='loss', step=epoch, context={"subset":"train"})
+            run.track(rmse, name='rmse', step=epoch, context={"subset":"train"})
+            run.track(acc, name='acc', step=epoch, context={"subset":"train"})
 
     save_checkpoint(model, optimizer, cfg, cfg.epochs, "data/model.pt")
 
 
-def main() -> None:
+if __name__ == "__main__":
     train()
 
-if __name__ == "__main__":
-    main()

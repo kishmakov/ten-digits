@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from dataclasses import dataclass
 
@@ -9,8 +10,8 @@ class BitsToNumsConfig:
     bits: int = 4
     nums: int = 1 << bits  # 16
     seed: int = 239
-    hidden: int = 10
-    epochs: int = 50000
+    hidden: int = 2
+    epochs: int = 100000
     lr: float = 1e-3
 
 
@@ -32,6 +33,21 @@ class BitsToNumsNet(nn.Module):
         x = self.act(x)
         x = self.fc2(x)
         return x
+
+    @torch.no_grad()
+    def get_predictions(self, x: torch.Tensor):
+        logits = self.forward(x)
+
+        probs = torch.softmax(logits, dim=-1)              # probabilities
+        pred_idx = probs.argmax(dim=-1)                    # indices
+        preds = F.one_hot(pred_idx, num_classes=probs.shape[-1]).float()
+
+        return {
+            "logits": logits,
+            "probs": probs,
+            "preds": preds,
+            "pred_idx": pred_idx,
+        }
 
 
 def get_bits_vector(id: int, bits: int) -> torch.Tensor:
