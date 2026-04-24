@@ -23,11 +23,13 @@ def make_b4_hook():
 
 
 if __name__ == "__main__":
-    model_config = BitsToNumsConfig(bits=5)
-    training_config = TrainingConfig(epochs=600000, device="cpu")
+    model_config = BitsToNumsConfig(bits=6, hidden=3)
+    training_config = TrainingConfig(epochs=50000, device="cuda")
 
     model = BitsToNumsNet(model_config)
     training = Training(training_config, model)
 
-    training.train(hook=make_b4_hook())
+    training.train(torch.nn.CrossEntropyLoss)
+
+    # training.train(hook=make_b4_hook())
 

@@ -80,8 +80,8 @@ class Training:
             save_checkpoint(self._dir, self.model, self.config, epoch, self.optimizer)
 
 
-    def train(self, hook = None) -> None:
-        criterion = torch.nn.CrossEntropyLoss()
+    def train(self, loss_cls, hook = None) -> None:
+        criterion = loss_cls()
 
         self._train_start = time.time()
         for epoch in range(self.config.epochs):

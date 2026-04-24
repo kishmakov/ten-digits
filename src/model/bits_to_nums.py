@@ -64,12 +64,14 @@ class BitsToNumsNet(BaseModel):
     def get_name(self) -> str:
         return f"B{self.config.bits}N{self.config.nums}H{self.config.hidden}"
 
+
 def _get_bits_vector(id: int, bits: int) -> torch.Tensor:
     vec = torch.zeros(bits)
     for b in range(bits):
         vec[b] = (id >> b) & 1
 
     return vec
+
 
 def _get_nums_vector(id: int, nums: int) -> torch.Tensor:
     vec = torch.zeros(nums)
