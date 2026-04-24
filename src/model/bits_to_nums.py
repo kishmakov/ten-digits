@@ -19,10 +19,14 @@ class BitsToNumsConfig:
 class BitsToNumsNet(BaseModel, nn.Module):
     def __init__(self, config: BitsToNumsConfig):
         super().__init__()
-        self.config = config
+        self._config = config
         self.fc1 = nn.Linear(config.bits, config.hidden)
         self.act = nn.ReLU()
         self.fc2 = nn.Linear(config.hidden, config.nums)
+
+    @property
+    def config(self) -> BitsToNumsConfig:
+        return self._config
 
     def init(self, seed):
         torch.manual_seed(seed)
@@ -37,24 +41,24 @@ class BitsToNumsNet(BaseModel, nn.Module):
         x = self.fc2(x)
         return x
 
-    def prepare_batch(self):
+    def get_train_batch(self):
         X = torch.stack([_get_bits_vector(i, self.config.bits) for i in range(self.config.nums)])
         Y = torch.stack([_get_nums_vector(i, self.config.nums) for i in range(self.config.nums)])
         return X, Y
 
-    @torch.no_grad()
-    def get_predictions(self, x: torch.Tensor):
-        logits = self.forward(x)
+    def get_test_batch(self):
+        return self.get_train_batch()
 
-        probs = torch.softmax(logits, dim=-1)              # probabilities
-        pred_idx = probs.argmax(dim=-1)                    # indices
+    @torch.no_grad()
+    def get_test_metrics(self, x: torch.Tensor, y: torch.Tensor) -> dict[str, float]:
+        logits = self.forward(x)
+        probs = torch.softmax(logits, dim=-1) # probabilities
+        pred_idx = probs.argmax(dim=-1) # indices
         preds = F.one_hot(pred_idx, num_classes=probs.shape[-1]).float()
 
         return {
-            "logits": logits,
-            "probs": probs,
-            "preds": preds,
-            "pred_idx": pred_idx,
+            "rmse": torch.sqrt(torch.mean((preds - y) ** 2)).item(),
+            "acc": (pred_idx == y.argmax(dim=-1)).float().mean().item(),
         }
 
 
